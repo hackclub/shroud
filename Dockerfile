@@ -1,11 +1,17 @@
 FROM python:3.12
 
-RUN pip install poetry
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
 
+# Copy dependency files first for better layer caching
+COPY pyproject.toml uv.lock ./
+
+# Sync dependencies
+RUN uv sync --frozen --no-dev
+
+# Copy the rest of the application
 COPY . .
 
-RUN poetry install
-
-ENTRYPOINT ["poetry", "run", "python", "-m", "shroud"]
+ENTRYPOINT ["uv", "run", "python", "-m", "shroud"]

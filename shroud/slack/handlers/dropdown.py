@@ -71,6 +71,15 @@ def handle_submission(ack, body, say, client: WebClient):
             name="hourglass",
             timestamp=forwarded_ts
         )
+        # Add :white_check_mark: reaction to the original user's message
+        try:
+            client.reactions_add(
+                channel=message_record["fields"]["dm_channel"],
+                name="white_check_mark",
+                timestamp=message_record["fields"]["dm_ts"]
+            )
+        except Exception as e:
+            print(f"Failed to add checkmark reaction to original message: {e}")
         db.finish_forward(
             dm_ts=message_record["fields"]["dm_ts"], forwarded_ts=forwarded_ts
         )

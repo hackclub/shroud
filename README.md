@@ -31,11 +31,11 @@ If you want to run the container in the background, use the `-d` flag:
 docker-compose up -d
 ```
 
-#### Poetry
-If you want to run the server without Docker, you can use [Poetry](https://python-poetry.org/):    
+#### uv
+If you want to run the server without Docker, you can use [uv](https://docs.astral.sh/uv/):    
 ```sh
-poetry install
-poetry run python -m shroud
+uv sync
+uv run python -m shroud
 ```
 
 ### Usage

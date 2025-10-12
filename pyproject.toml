@@ -1,25 +1,32 @@
-[tool.poetry]
+[project]
 name = "shroud"
 version = "0.1.0"
 description = ""
-authors = ["Angad Behl <angad@angad.me>"]
-# readme = "README.md"
-packages = [{ include = "shroud" }]
-scripts = { shroud = "shroud.__main__:main" }
-include = ["manifest.yml"]
+authors = [
+    { name = "Angad Behl", email = "angad@angad.me" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "python-dotenv>=1.0.1",
+    "slack-bolt>=1.20.0",
+    "dynaconf>=3.2.6",
+    "pyairtable>=2.3.3",
+    "pyyaml>=6.0.2",
+    "pydantic>=2.10.5",
+]
 
-[tool.poetry.dependencies]
-python = "^3.12"
-python-dotenv = "^1.0.1"
-slack-bolt = "^1.20.0"
-dynaconf = "^3.2.6"
-pyairtable = "^2.3.3"
-pyyaml = "^6.0.2"
-pydantic = "^2.10.5"
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.6.2",
+]
 
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.6.2"
+[project.scripts]
+shroud = "shroud.__main__:main"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["shroud"]
+artifacts = ["manifest.yml"]

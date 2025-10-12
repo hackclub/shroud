@@ -191,6 +191,15 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
             attachments=message.attachments,
             thread_ts=message.record["fields"]["forwarded_ts"],
         )
+        # Add :white_check_mark: reaction to the DM message
+        try:
+            client.reactions_add(
+                channel=message.channel,
+                name="white_check_mark",
+                timestamp=message.ts
+            )
+        except Exception as e:
+            print(f"Failed to add checkmark reaction to DM message: {e}")
     elif message.record is not None and message.is_dm is False:
         if message.content.startswith("!"):
             client.chat_postEphemeral(
@@ -209,6 +218,15 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
                 username=utils.get_name(message.user, client),
                 icon_url=utils.get_profile_picture_url(message.user, client),
             )
+            # Add :white_check_mark: reaction to the channel message
+            try:
+                client.reactions_add(
+                    channel=message.channel,
+                    name="white_check_mark",
+                    timestamp=message.ts
+                )
+            except Exception as e:
+                print(f"Failed to add checkmark reaction to channel message: {e}")
             if (
                 not message.record["fields"].get("reply_time")
             ):

@@ -114,6 +114,8 @@ def get_message_by_ts(ts) -> dict:
     return record
 
 
+
+
 def main():
     global table
     table = get_table()

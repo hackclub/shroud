@@ -91,3 +91,65 @@ def handle_submission(ack, body, say, client: WebClient):
     else:
         say("Please select an option before submitting.")
 
+
+# Listener for the cancel button
+@app.action("cancel_forwarding")
+def handle_cancellation(ack, body, client: WebClient):
+    ack()
+
+    user_id = body["user"]["id"]
+    selection_ts = body["message"]["ts"]
+
+    try:
+        # Get the message record to find the DM channel and original message
+        message_record = db.get_message_by_ts(selection_ts)
+        if message_record is None:
+            client.chat_postEphemeral(
+                channel=body["channel"]["id"],
+                user=user_id,
+                text="Report not found or already processed."
+            )
+            return
+
+        # Check if the report has already been forwarded
+        if message_record["fields"].get("forwarded_ts"):
+            client.chat_postEphemeral(
+                channel=body["channel"]["id"],
+                user=user_id,
+                text="Cannot cancel a report that has already been forwarded."
+            )
+            return
+
+        # Update the selection message to show cancellation
+        app.client.chat_update(
+            channel=message_record["fields"]["dm_channel"],
+            ts=selection_ts,
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "This report has been cancelled.",
+                    },
+                }
+            ],
+            text="Report cancelled",
+        )
+
+        # Delete the incomplete database entry
+        db.get_table().delete(message_record["id"])
+
+        # Send confirmation to the user
+        client.chat_postEphemeral(
+            channel=message_record["fields"]["dm_channel"],
+            user=user_id,
+            text="Report has been cancelled successfully.",
+        )
+
+    except Exception as e:
+        client.chat_postEphemeral(
+            channel=body["channel"]["id"],
+            user=user_id,
+            text=f"An unexpected error occurred: {str(e)}"
+        )
+

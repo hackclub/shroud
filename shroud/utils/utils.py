@@ -77,6 +77,12 @@ def begin_forward(message: "MessageEvent", client: WebClient) -> str:
                         "text": {"type": "plain_text", "text": "Submit"},
                         "style": "primary",
                         "action_id": "submit_forwarding",
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "Cancel"},
+                        "style": "danger",
+                        "action_id": "cancel_forwarding",
                     }
                 ],
             },

@@ -6,5 +6,5 @@ services:
     env_file: .env
 #    restart: unless-stopped
     tty: true
-    env:
+    environment:
       - ENV_FOR_DYNACONF=production

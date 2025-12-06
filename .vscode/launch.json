@@ -8,7 +8,10 @@
             "name": "Python Debugger: Module",
             "type": "debugpy",
             "request": "launch",
-            "module": "shroud"
+            "module": "shroud",
+            "env": {
+                "ENV_FOR_DYNACONF": "development"
+            }
         }
     ]
 }

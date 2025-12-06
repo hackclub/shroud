@@ -1,8 +1,0 @@
-slack_app_token = ""
-slack_bot_token = ""
-airtable_token = ""
-airtable_base_id  = ""
-airtable_table_name = ""
-channel="C123ABC456" # This is an example, replace with your channel ID
-leading_help_text = "To file a report, just DM this bot with your report. You'll be asked to select if you want your report to be anonymous or not"
-app_name = "shroud" # If this isn't sppecified, the default is "shroud" meaning the command would be "/shroud-..."

@@ -6,5 +6,3 @@ services:
     env_file: .env
 #    restart: unless-stopped
     tty: true
-    volumes:
-      - ./settings.toml:/app/settings.toml

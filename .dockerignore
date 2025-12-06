@@ -1,5 +1,4 @@
 .secrets.toml
-settings.toml
 
 # Ignore Python cache files
 __pycache__/

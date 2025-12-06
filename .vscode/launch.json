@@ -10,8 +10,10 @@
             "request": "launch",
             "module": "shroud",
             "env": {
-                "ENV_FOR_DYNACONF": "development"
-            }
+                // "ENV_FOR_DYNACONF": "development"
+                "ENV_FOR_DYNACONF": "production"
+            },
+            "envFile": "${workspaceFolder}/.env"
         }
     ]
 }

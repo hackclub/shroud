@@ -15,7 +15,7 @@ features:
       should_escape: false
     - command: /shroud-create-dm
       description: Create a DM group with all FD members and the specified user.
-      usage_hint: user
+      usage_hint: "[user]"
       should_escape: true
     - command: /shroud-unresolved
       description: List unresolved shroud threads from the past N days

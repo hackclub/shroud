@@ -1,7 +1,8 @@
+import datetime
+from typing import Any, cast
 from slack_sdk import WebClient
 from shroud.slack import app
 from shroud.utils import db
-import datetime
 
 # Listen for reaction_added events to remove :hourglass: if :white_check_mark: or :x: is added
 @app.event("reaction_added")
@@ -53,7 +54,9 @@ def handle_reaction_removed(event, client: WebClient):
         # Fetch current reactions for the message
         try:
             resp = client.reactions_get(channel=channel, timestamp=ts)
-            reactions = resp["message"].get("reactions", [])
+            data = cast(dict[str, Any], resp.data)
+            message_data = cast(dict[str, Any], data.get("message", {}))
+            reactions = cast(list[dict[str, Any]], message_data.get("reactions", []))
             # Count all check mark and x reactions
             check_count = next((r["count"] for r in reactions if r["name"] == "white_check_mark"), 0)
             x_count = next((r["count"] for r in reactions if r["name"] == "x"), 0)

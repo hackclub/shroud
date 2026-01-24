@@ -1,9 +1,10 @@
+from typing import Any, cast
 from pyairtable import Api, Table
 from pyairtable.formulas import match
 from shroud import settings
 from slack_sdk import WebClient
 
-table = None
+table: Table | None = None
 
 # class RelayRecord(BaseModel):
 #     dm_ts: Annotated[str, StringConstraints(pattern=r"^[0-9]{10}\.[0-9]{6}$")]
@@ -24,33 +25,28 @@ def clean_database(client: WebClient) -> None:
     If either the DM or the forwarded message no longer exists, remove the record from the database
     """
     global table
+    assert table is not None, "Database table not initialized"
     for list_of_records in table.iterate():
         for full_record in list_of_records:
             messages = []
             r = full_record["fields"]
             try:
-                messages.extend(
-                    [
-                        m
-                        for m in client.conversations_history(
-                            channel=r["dm_channel"],
-                            inclusive=True,
-                            oldest=r["dm_ts"],
-                            limit=1,
-                        ).data["messages"]
-                    ]
+                resp1 = client.conversations_history(
+                    channel=r["dm_channel"],
+                    inclusive=True,
+                    oldest=r["dm_ts"],
+                    limit=1,
                 )
-                messages.extend(
-                    [
-                        m
-                        for m in client.conversations_history(
-                            channel=settings.channel,
-                            inclusive=True,
-                            oldest=r["forwarded_ts"],
-                            limit=1,
-                        ).data["messages"]
-                    ]
+                data1 = cast(dict[str, Any], resp1.data)
+                messages.extend(cast(list[dict[str, Any]], data1.get("messages", [])))
+                resp2 = client.conversations_history(
+                    channel=settings.channel,
+                    inclusive=True,
+                    oldest=r["forwarded_ts"],
+                    limit=1,
                 )
+                data2 = cast(dict[str, Any], resp2.data)
+                messages.extend(cast(list[dict[str, Any]], data2.get("messages", [])))
             except KeyError:
                 table.delete(full_record["id"])
                 continue
@@ -66,6 +62,7 @@ def clean_database(client: WebClient) -> None:
 
 def save_forward_start(content: str, dm_ts: str, selection_ts: str, dm_channel: str) -> None:
     global table
+    assert table is not None, "Database table not initialized"
     table.create(
         {
             "dm_ts": dm_ts,
@@ -78,6 +75,7 @@ def save_forward_start(content: str, dm_ts: str, selection_ts: str, dm_channel: 
 
 def finish_forward(dm_ts, forwarded_ts) -> None:
     global table
+    assert table is not None, "Database table not initialized"
     record = table.first(formula=match({"dm_ts": dm_ts}))
     if record is None:
         raise ValueError(f"Record with timestamp {dm_ts} not found")
@@ -87,6 +85,7 @@ def finish_forward(dm_ts, forwarded_ts) -> None:
 
 def save_selection(selection_ts, selection) -> None:
     global table
+    assert table is not None, "Database table not initialized"
     record = table.first(formula=match({"selection_ts": selection_ts}))
     if record is None:
         raise ValueError(f"Record with timestamp {selection_ts} not found")
@@ -94,8 +93,9 @@ def save_selection(selection_ts, selection) -> None:
     table.update(record["id"], {"selection": selection})
 
 
-def get_message_by_ts(ts) -> dict:
+def get_message_by_ts(ts: str) -> dict[str, Any] | None:
     global table
+    assert table is not None, "Database table not initialized"
     # https://pyairtable.readthedocs.io/en/stable/tables.html#formulas
     # formula = OR(
     #     match({"forwarded_ts": ts}),
@@ -111,7 +111,7 @@ def get_message_by_ts(ts) -> dict:
     if record is None:
         return None
         # raise ValueError(f"Record with timestamp {ts} not found")
-    return record
+    return dict(record)
 
 
 

@@ -1,3 +1,4 @@
+from typing import Any, cast
 from slack_sdk import WebClient
 from shroud import settings
 from shroud.slack import app
@@ -21,6 +22,8 @@ def handle_submission(ack, body, say, client: WebClient):
 
     # Get the user's selection
     message_record = db.get_message_by_ts(body["message"]["ts"])
+    if message_record is None:
+        return
     user_selection = message_record.get("fields", {}).get("selection", None)
     if user_selection is not None:
         message = utils.get_message_by_ts(
@@ -28,6 +31,8 @@ def handle_submission(ack, body, say, client: WebClient):
             channel=message_record["fields"]["dm_channel"],
             client=client,
         )
+        if message is None:
+            return
         original_text = message["text"]
         attachments = message.get("attachments", [])
 
@@ -54,7 +59,7 @@ def handle_submission(ack, body, say, client: WebClient):
             text="Report submitted",
         )
 
-        forwarded_ts = client.chat_postMessage(
+        post_resp = client.chat_postMessage(
             channel=settings.channel,
             text=original_text,
             attachments=attachments,
@@ -64,7 +69,9 @@ def handle_submission(ack, body, say, client: WebClient):
             icon_url=utils.get_profile_picture_url(user_id, client)
             if user_selection == "with_username"
             else None,
-        ).data["ts"]
+        )
+        post_data = cast(dict[str, Any], post_resp.data)
+        forwarded_ts = str(post_data.get("ts", ""))
         # Add :hourglass: reaction to the forwarded message
         client.reactions_add(
             channel=settings.channel,

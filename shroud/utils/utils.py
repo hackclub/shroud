@@ -1,41 +1,49 @@
 from slack_sdk import WebClient
 from shroud import settings
 from shroud.utils import db
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, cast
 if TYPE_CHECKING:
     from shroud.slack.handlers.incoming_message import MessageEvent
 
 
 
-def get_message_by_ts(ts: str, channel: str, client: WebClient) -> str:
+def get_message_by_ts(ts: str, channel: str, client: WebClient) -> dict[str, Any] | None:
     try:
-        message = client.conversations_history(
+        resp = client.conversations_history(
             channel=channel, oldest=ts, inclusive=True, limit=1
-        ).data["messages"][0]
-        return message
+        )
+        data = cast(dict[str, Any], resp.data)
+        messages = cast(list[dict[str, Any]], data.get("messages", []))
+        return messages[0]
     except IndexError:
         # This might be because it's a threaded message
         try:
-            message = client.conversations_replies(
-                channel=channel, ts=ts, oldest=ts, inclusive=True, limit=1).data["messages"][0]
-            return message
+            resp = client.conversations_replies(
+                channel=channel, ts=ts, oldest=ts, inclusive=True, limit=1
+            )
+            data = cast(dict[str, Any], resp.data)
+            messages = cast(list[dict[str, Any]], data.get("messages", []))
+            return messages[0]
         except IndexError:
             return None
 
 
 
-def get_profile_picture_url(user_id, client: WebClient) -> str:
+def get_profile_picture_url(user_id: str, client: WebClient) -> str:
     user_info = client.users_info(user=user_id)
-    profile_picture_url = user_info["user"]["profile"]["image_512"]
-    return profile_picture_url
+    data = cast(dict[str, Any], user_info.data)
+    user_data = cast(dict[str, Any], data.get("user", {}))
+    return str(user_data.get("profile", {}).get("image_512", ""))
 
 
-def get_name(user_id, client: WebClient) -> str:
+def get_name(user_id: str, client: WebClient) -> str:
     user_info = client.users_info(user=user_id)
-    return user_info.data["user"]["real_name"]
+    data = cast(dict[str, Any], user_info.data)
+    user_data = cast(dict[str, Any], data.get("user", {}))
+    return str(user_data.get("real_name", ""))
 
 
-def begin_forward(message: "MessageEvent", client: WebClient) -> str:
+def begin_forward(message: "MessageEvent", client: WebClient) -> None:
     selection_prompt = client.chat_postMessage(
         channel=message.channel,
         text="Select how this message should be forwarded",
@@ -88,11 +96,12 @@ def begin_forward(message: "MessageEvent", client: WebClient) -> str:
             },
         ],
     )
-    selection_ts = selection_prompt.data["ts"]
+    prompt_data = cast(dict[str, Any], selection_prompt.data)
+    selection_ts = str(prompt_data.get("ts", ""))
 
     db.save_forward_start(
         dm_ts=message.ts,
-        content=message.content,
+        content=message.content or "",
         selection_ts=selection_ts,
         dm_channel=message.channel
     )

@@ -1,6 +1,9 @@
 import yaml
 import importlib.resources
+from pathlib import Path
+from typing import Any, cast
 from slack_sdk.web.client import WebClient
+from slack_sdk.errors import SlackApiError
 from slack_bolt.context.respond import Respond
 from shroud.slack import app
 from shroud.utils import db, utils
@@ -25,7 +28,9 @@ def create_dm(ack, respond: Respond, client: WebClient, command):
 
     # Check if user is in the allowlist channel
     try:
-        members = client.conversations_members(channel=allowlist_channel)["members"]
+        resp = client.conversations_members(channel=allowlist_channel)
+        data = cast(dict[str, Any], resp.data)
+        members = cast(list[str], data.get("members", []))
         if user_id not in members:
             respond("You must be a member of the allowlist channel to use this command.")
             return
@@ -44,28 +49,33 @@ def create_dm(ack, respond: Respond, client: WebClient, command):
     try:
         invite_users = [user_id, target_user]
         channel_name= f"{settings.app_name}-{target_user.lower()}"
-        private_channel = client.conversations_create(
+        create_resp = client.conversations_create(
             name=channel_name,
             is_private=True,
-        )["channel"]["id"]
+        )
+        create_data = cast(dict[str, Any], create_resp.data)
+        channel_data = cast(dict[str, Any], create_data.get("channel", {}))
+        private_channel = str(channel_data.get("id", ""))
         existed = False
-    except Exception as e:
+    except SlackApiError as e:
         if e.response["error"] == "name_taken":
             respond("A DM with this name already exists.")
         else:
             respond(f"Failed to create DM: {e}")
         # Get the channel ID from channel_name
-        private_channel = client.conversations_list(types="private_channel")["channels"]
+        list_resp = client.conversations_list(types="private_channel")
+        list_data = cast(dict[str, Any], list_resp.data)
+        channels = cast(list[dict[str, Any]], list_data.get("channels", []))
         # next function retrieves the first matching channel from the generator.
         # If no match is found, it returns None.
-        private_channel = next(
-            (channel for channel in private_channel if channel["name"] == channel_name),
+        matched_channel = next(
+            (channel for channel in channels if channel["name"] == channel_name),
             None,
         )
-        if private_channel is None:
+        if matched_channel is None:
             respond("Unable to find the private channel.")
             return
-        private_channel = private_channel["id"]
+        private_channel = str(matched_channel["id"])
         existed = True
     else:
         respond(f"Created a prviate channel <#{private_channel}>")
@@ -73,7 +83,7 @@ def create_dm(ack, respond: Respond, client: WebClient, command):
         client.conversations_invite(
             channel=private_channel, users=",".join(invite_users)
         )
-    except Exception as e:
+    except SlackApiError as e:
         if e.response["error"] == "already_in_channel":
             respond("You are already in this DM.")
         else:
@@ -121,7 +131,7 @@ def join_dm(ack, body, client: WebClient):
             user=user_id,
             text="You have been added to the channel.",
         )
-    except Exception as e:
+    except SlackApiError as e:
         if e.response["error"] == "already_in_channel":
             client.chat_postEphemeral(
                 channel=private_channel,
@@ -140,7 +150,8 @@ def join_dm(ack, body, client: WebClient):
 def help_command(ack, respond: Respond):
     ack()
     # The package looks like shroud.slack and we only want shroud/manifest.yml
-    manifest_path = importlib.resources.files(__package__.split(".")[0]).parent / "manifest.yml"
+    package_name = __package__.split(".")[0] if __package__ else "shroud"
+    manifest_path = Path(str(importlib.resources.files(package_name))).parent / "manifest.yml"
     with open(manifest_path, "r") as f:
         features = yaml.safe_load(f)["features"]
 

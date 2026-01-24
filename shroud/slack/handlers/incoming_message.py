@@ -24,8 +24,8 @@ class MessageEvent(BaseModel):
     ) = None
     ts: Annotated[str, StringConstraints(pattern=ValidationRegexs.ts.value)]
     user: Annotated[str, StringConstraints(pattern=ValidationRegexs.user.value)]
-    content: str = None
-    content_post_update: str = None
+    content: str | None = None
+    content_post_update: str | None = None
     # Probably only needs to be for message_changed
     attachments: list[Any] = []
 
@@ -49,9 +49,9 @@ class MessageEvent(BaseModel):
 
     @computed_field
     @property
-    def record(self) -> dict:
+    def record(self) -> dict[str, Any] | None:
         fetched_result = db.get_message_by_ts(self.thread_ts or self.ts)
-        return None if fetched_result is None else fetched_result
+        return fetched_result
 
     class Target(BaseModel):
         channel: Annotated[
@@ -84,13 +84,13 @@ class MessageEvent(BaseModel):
     @computed_field
     @property
     def get_prefix_info(self) -> PrefixInfo:
-        content = self.content_post_update or self.content
+        content = self.content_post_update or self.content or ""
         if content.startswith("?"):
             return self.PrefixInfo(
                 should_forward=True,
                 # Remove the '?' and since sometimes there's a space after it, remove that too (if it exists)
                 # If it is an edited message, send the content with the edit statement otherwise remove the prefix and send it
-                content_without_prefix=(content[2:] if content.startswith("? ") else content[1:]) if not self.content_post_update else self.content
+                content_without_prefix=(content[2:] if content.startswith("? ") else content[1:]) if not self.content_post_update else (self.content or "")
             )
         return self.PrefixInfo(should_forward=False, content_without_prefix=content)
 
@@ -201,7 +201,7 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
         except Exception as e:
             print(f"Failed to add checkmark reaction to DM message: {e}")
     elif message.record is not None and message.is_dm is False:
-        if message.content.startswith("!"):
+        if message.content and message.content.startswith("!"):
             client.chat_postEphemeral(
                 channel=message.channel,
                 thread_ts=message.ts,

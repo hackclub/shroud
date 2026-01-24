@@ -17,6 +17,10 @@ features:
       description: Create a DM group with all FD members and the specified user.
       usage_hint: user
       should_escape: true
+    - command: /shroud-unresolved
+      description: List unresolved shroud threads from the past N days
+      usage_hint: "[days, default 1]"
+      should_escape: false
 oauth_config:
   scopes:
     bot:

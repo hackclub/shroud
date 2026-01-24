@@ -1,4 +1,5 @@
 import yaml
+import datetime
 import importlib.resources
 from pathlib import Path
 from typing import Any, cast
@@ -145,6 +146,104 @@ def join_dm(ack, body, client: WebClient):
                 user=user_id,
                 text=f"Failed to join channel: {e}",
             )
+
+@app.command(utils.apply_command_prefix("unresolved"))
+def unresolved_command(ack, respond: Respond, command):
+    ack()
+    
+    # Parse optional days parameter (default 1)
+    text = command.get("text", "").strip()
+    try:
+        days = float(text) if text else 1.0
+        if days <= 0:
+            days = 1.0
+    except ValueError:
+        respond("Invalid number. Usage: `/shroud-unresolved [days, default 1]`")
+        return
+    
+    table = db.get_table()
+    now = datetime.datetime.now(datetime.timezone.utc)
+    cutoff = now - datetime.timedelta(days=days)
+    cutoff_ts = str(cutoff.timestamp())
+    
+    # Filter: unresolved (empty resolve_time) and forwarded within timeframe
+    formula = f"AND({{resolve_time}} = '', {{forwarded_ts}} != '', {{forwarded_ts}} >= '{cutoff_ts}')"
+    records = table.all(formula=formula)
+    
+    unresolved: list[tuple[datetime.datetime, str, str]] = []
+    for record in records:
+        fields = record["fields"]
+        forwarded_ts = fields.get("forwarded_ts")
+        content = fields.get("content", "")
+        if not content:
+            label = "Thread"
+        else:
+            if len(content) <= 40:
+                label = content
+            else:
+                truncated = content[:40]
+                last_space = truncated.rfind(' ')
+                if last_space == -1:
+                    label = truncated + "..."
+                else:
+                    label = truncated[:last_space] + "..."
+        if forwarded_ts:
+            fwd_dt = datetime.datetime.fromtimestamp(float(forwarded_ts), tz=datetime.timezone.utc)
+            unresolved.append((fwd_dt, forwarded_ts, label))
+    
+    # Format time period text, up to 72 hours then days
+    if days <= 3:
+        period_text = f"{round(days * 24)} hours"
+    else:
+        period_text = f"{round(days, 2):g} days"    
+    if not unresolved:
+        respond(f"No unresolved threads in the past {period_text}.")
+        return
+    
+    unresolved.sort(key=lambda x: x[0], reverse=True)
+    
+    list_items = []
+    for fwd_dt, forwarded_ts, label in unresolved:
+        age = now - fwd_dt
+        total_seconds = int(age.total_seconds())
+        days, remainder = divmod(total_seconds, 86400)
+        hours, remainder = divmod(remainder, 3600)
+        minutes = remainder // 60
+        if days > 0:
+            age_str = f"{days}d {hours}h"
+        elif hours > 0:
+            age_str = f"{hours}h {minutes}m"
+        elif minutes > 0:
+            age_str = f"{minutes}m"
+        
+        link = f"https://hackclub.slack.com/archives/{settings.channel}/p{forwarded_ts.replace('.', '')}"
+        list_items.append({
+            "type": "rich_text_section",
+            "elements": [
+                {"type": "link", "url": link, "text": label},
+                {"type": "text", "text": f" - {age_str} ago"}
+            ]
+        })
+    
+    blocks = [{
+        "type": "rich_text",
+        "elements": [
+            {
+                "type": "rich_text_section",
+                "elements": [
+                    {"type": "text", "text": f"Unresolved threads in the past {period_text} ({len(unresolved)})", "style": {"bold": True}},
+                    {"type": "text", "text": "\n"}
+                ]
+            },
+            {
+                "type": "rich_text_list",
+                "style": "bullet",
+                "elements": list_items
+            }
+        ]
+    }]
+    
+    respond(blocks=blocks)
 
 @app.command(utils.apply_command_prefix("help"))
 def help_command(ack, respond: Respond):

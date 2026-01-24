@@ -203,8 +203,8 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
     elif message.record is not None and message.is_dm is False:
         if message.content.startswith("!"):
             client.chat_postEphemeral(
-                channel=message.record["fields"]["dm_channel"],
-                thread_ts=message.record["fields"]["dm_ts"],
+                channel=message.channel,
+                thread_ts=message.ts,
                 user=message.user,
                 text="`!` does nothing. By default, messages are not forwarded unless `?` is prepended to them.",
             )

@@ -163,23 +163,28 @@ def unresolved_command(ack, respond: Respond, command, client: WebClient):
         respond(f"Failed to verify channel membership: {e}")
         return
     
-    # Parse optional days parameter (default 1)
-    text = command.get("text", "").strip()
-    try:
-        days = float(text) if text else 1.0
-        if days <= 0:
-            days = 1.0
-    except ValueError:
-        respond("Invalid number. Usage: `/shroud-unresolved [days, default 1]`")
-        return
+    # Parse optional days parameter (default 1, or "all" for all time)
+    text = command.get("text", "").strip().lower()
+    all_time = text == "all"
+    days = 1.0
+    if not all_time:
+        try:
+            days = float(text) if text else 1.0
+            if days <= 0:
+                days = 1.0
+        except ValueError:
+            respond("Invalid input. Usage: `/shroud-unresolved [days | all]`")
+            return
     
     table = db.get_table()
     now = datetime.datetime.now(datetime.timezone.utc)
-    cutoff = now - datetime.timedelta(days=days)
-    cutoff_ts = str(cutoff.timestamp())
     
-    # Filter: unresolved (empty resolve_time) and forwarded within timeframe
-    formula = f"AND({{resolve_time}} = '', {{forwarded_ts}} != '', {{forwarded_ts}} >= '{cutoff_ts}')"
+    if all_time:
+        formula = "AND({resolve_time} = '', {forwarded_ts} != '')"
+    else:
+        cutoff = now - datetime.timedelta(days=days)
+        cutoff_ts = str(cutoff.timestamp())
+        formula = f"AND({{resolve_time}} = '', {{forwarded_ts}} != '', {{forwarded_ts}} >= '{cutoff_ts}')"
     records = table.all(formula=formula)
     
     unresolved: list[tuple[datetime.datetime, str, str]] = []
@@ -203,13 +208,16 @@ def unresolved_command(ack, respond: Respond, command, client: WebClient):
             fwd_dt = datetime.datetime.fromtimestamp(float(forwarded_ts), tz=datetime.timezone.utc)
             unresolved.append((fwd_dt, forwarded_ts, label))
     
-    # Format time period text, up to 72 hours then days
-    if days <= 3:
-        period_text = f"{round(days * 24)} hours"
+    # Format time period text
+    if all_time:
+        period_text = "all time"
+    elif days <= 3:
+        period_text = f"in the last {round(days * 24)} hours"
     else:
-        period_text = f"{round(days, 2):g} days"    
+        period_text = f"in the last {round(days, 2):g} days"
+    
     if not unresolved:
-        respond(f"No unresolved threads in the past {period_text}.")
+        respond(f"No unresolved threads {period_text}.")
         return
     
     unresolved.sort(key=lambda x: x[0], reverse=True)
@@ -225,7 +233,7 @@ def unresolved_command(ack, respond: Respond, command, client: WebClient):
             age_str = f"{days}d {hours}h"
         elif hours > 0:
             age_str = f"{hours}h {minutes}m"
-        elif minutes > 0:
+        else:
             age_str = f"{minutes}m"
         
         link = f"https://hackclub.slack.com/archives/{settings.channel}/p{forwarded_ts.replace('.', '')}"
@@ -243,7 +251,7 @@ def unresolved_command(ack, respond: Respond, command, client: WebClient):
             {
                 "type": "rich_text_section",
                 "elements": [
-                    {"type": "text", "text": f"Unresolved threads in the past {period_text} ({len(unresolved)})", "style": {"bold": True}},
+                    {"type": "text", "text": f"Unresolved threads {period_text} ({len(unresolved)})", "style": {"bold": True}},
                     {"type": "text", "text": "\n"}
                 ]
             },

@@ -148,8 +148,20 @@ def join_dm(ack, body, client: WebClient):
             )
 
 @app.command(utils.apply_command_prefix("unresolved"))
-def unresolved_command(ack, respond: Respond, command):
+def unresolved_command(ack, respond: Respond, command, client: WebClient):
     ack()
+    
+    user_id = command["user_id"]
+    try:
+        resp = client.conversations_members(channel=settings.channel)
+        data = cast(dict[str, Any], resp.data)
+        members = cast(list[str], data.get("members", []))
+        if user_id not in members:
+            respond("You must be a member of the allowlist channel to use this command.")
+            return
+    except Exception as e:
+        respond(f"Failed to verify channel membership: {e}")
+        return
     
     # Parse optional days parameter (default 1)
     text = command.get("text", "").strip()

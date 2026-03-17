@@ -139,6 +139,22 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
                     print(f"Failed to add checkmark reaction to DM message: {e}")
             elif not message.record and message.is_dm:
                 utils.begin_forward(message, client)
+            elif message.record and not message.is_dm:
+                prefix_info = message.get_prefix_info
+                if prefix_info.should_forward:
+                    utils.forward_files(event.get("files", []), message.record["fields"]["dm_channel"], message.record["fields"]["dm_ts"], client)
+                    if prefix_info.content_without_prefix:
+                        client.chat_postMessage(
+                            channel=message.record["fields"]["dm_channel"],
+                            thread_ts=message.record["fields"]["dm_ts"],
+                            text=prefix_info.content_without_prefix,
+                            username=utils.get_name(message.user, client),
+                            icon_url=utils.get_profile_picture_url(message.user, client),
+                        )
+                    try:
+                        client.reactions_add(channel=message.channel, name="white_check_mark", timestamp=message.ts)
+                    except Exception as e:
+                        print(f"Failed to add checkmark reaction to channel message: {e}")
             return
         case MessageEvent.Subtypes.normal:
             message = MessageEvent(

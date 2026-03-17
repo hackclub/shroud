@@ -5,12 +5,21 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Module",
+            "name": "shroud (development)",
             "type": "debugpy",
             "request": "launch",
             "module": "shroud",
             "env": {
-                // "ENV_FOR_DYNACONF": "development"
+                "ENV_FOR_DYNACONF": "development"
+            },
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "name": "shroud (production)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "shroud",
+            "env": {
                 "ENV_FOR_DYNACONF": "production"
             },
             "envFile": "${workspaceFolder}/.env"

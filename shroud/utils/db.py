@@ -15,6 +15,8 @@ table: Table | None = None
 #     dm_channel: str = None
 
 def get_table() -> Table:
+    print(f"DEBUG token: {settings.airtable_token[:20]}...")
+    print(f"DEBUG base: {settings.airtable_base_id}, table: {settings.airtable_table_name}")
     api = Api(api_key=settings.airtable_token)
     table = api.table(settings.airtable_base_id, settings.airtable_table_name)
     return table

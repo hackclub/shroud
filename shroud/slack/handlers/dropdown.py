@@ -72,6 +72,7 @@ def handle_submission(ack, body, say, client: WebClient):
         )
         post_data = cast(dict[str, Any], post_resp.data)
         forwarded_ts = str(post_data.get("ts", ""))
+        utils.forward_files(message.get("files", []), settings.channel, forwarded_ts, client)
         # Add :hourglass: reaction to the forwarded message
         client.reactions_add(
             channel=settings.channel,

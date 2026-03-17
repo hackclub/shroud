@@ -9,4 +9,4 @@ app_name = "shroud" # If this isn't sppecified, the default is "shroud" meaning 
 airtable_table_name = "tbllFyDNwnXlTCMVl"
 app_name = "dev-shroud"
 airtable_base_id  = "apphYndkize7YybCs"
-
+channel = "C07JX2TK0UX"

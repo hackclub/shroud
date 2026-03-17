@@ -1,3 +1,4 @@
+import requests
 from slack_sdk import WebClient
 from shroud import settings
 from shroud.utils import db
@@ -109,6 +110,22 @@ def begin_forward(message: "MessageEvent", client: WebClient) -> None:
 # def is_thread(event: Dict[str, Any]) -> bool:
 #     return "thread_ts" in event
 #     # return "thread_ts" in event or "thread_ts" in event.get("previous_message", {})
+
+def forward_files(files: list[dict[str, Any]], channel: str, thread_ts: str, client: WebClient) -> None:
+    for file_data in files:
+        url = file_data.get("url_private_download") or file_data.get("url_private")
+        if not url:
+            continue
+        filename = file_data.get("name", "file")
+        response = requests.get(url, headers={"Authorization": f"Bearer {settings.slack_bot_token}"})
+        response.raise_for_status()
+        client.files_upload_v2(
+            channel=channel,
+            thread_ts=thread_ts,
+            file=response.content,
+            filename=filename,
+        )
+
 
 def apply_command_prefix(command: str) -> str:
     command = f"/{settings.app_name}-{command}"

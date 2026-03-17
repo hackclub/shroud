@@ -126,11 +126,19 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
                 subtype=subtype,
             )
             if message.record and message.is_dm:
-                client.chat_postMessage(
-                    channel=event["channel"],
-                    thread_ts=event.get("thread_ts", event.get("ts")),
-                    text="File uploads are not supported yet. Please re-send the message with the file uploaded to something like https://catbox.moe/ and then send the link in your message. This message was not forwarded.",
-                )
+                utils.forward_files(event.get("files", []), settings.channel, message.record["fields"]["forwarded_ts"], client)
+                if message.content:
+                    client.chat_postMessage(
+                        channel=settings.channel,
+                        text=message.content,
+                        thread_ts=message.record["fields"]["forwarded_ts"],
+                    )
+                try:
+                    client.reactions_add(channel=message.channel, name="white_check_mark", timestamp=message.ts)
+                except Exception as e:
+                    print(f"Failed to add checkmark reaction to DM message: {e}")
+            elif not message.record and message.is_dm:
+                utils.begin_forward(message, client)
             return
         case MessageEvent.Subtypes.normal:
             message = MessageEvent(

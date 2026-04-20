@@ -1,3 +1,6 @@
+import os
+import random
+import string
 import requests
 from slack_sdk import WebClient
 from shroud import settings
@@ -116,7 +119,9 @@ def forward_files(files: list[dict[str, Any]], channel: str, thread_ts: str, cli
         url = file_data.get("url_private_download") or file_data.get("url_private")
         if not url:
             continue
-        filename = file_data.get("name", "file")
+        og = file_data.get("name", "file")
+        ext = os.path.splitext(og)[1]
+        filename = f"{''.join(random.choices(string.ascii_lowercase + string.digits, k=6))}{ext}"
         response = requests.get(url, headers={"Authorization": f"Bearer {settings.slack_bot_token}"})
         response.raise_for_status()
         client.files_upload_v2(

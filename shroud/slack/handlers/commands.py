@@ -180,11 +180,11 @@ def unresolved_command(ack, respond: Respond, command, client: WebClient):
     now = datetime.datetime.now(datetime.timezone.utc)
     
     if all_time:
-        formula = "AND({resolve_time} = '', {forwarded_ts} != '')"
+        formula = "AND(NOT({resolve_time}), {forwarded_ts} != '')"
     else:
         cutoff = now - datetime.timedelta(days=days)
         cutoff_ts = str(cutoff.timestamp())
-        formula = f"AND({{resolve_time}} = '', {{forwarded_ts}} != '', {{forwarded_ts}} >= '{cutoff_ts}')"
+        formula = f"AND(NOT({{resolve_time}}), {{forwarded_ts}} != '', {{forwarded_ts}} >= '{cutoff_ts}')"
     records = table.all(formula=formula)
     
     unresolved: list[tuple[datetime.datetime, str, str]] = []

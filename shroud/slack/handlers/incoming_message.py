@@ -260,9 +260,8 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
                 try:
                     fwd_dt = datetime.datetime.fromtimestamp(float(forwarded_time), tz=datetime.timezone.utc)
                     reply_dt = datetime.datetime.fromtimestamp(float(reply_time), tz=datetime.timezone.utc)
-                    time_diff = (reply_dt - fwd_dt).total_seconds()
-                    formatted_time = str(datetime.timedelta(seconds=int(time_diff)))
-                    db.get_table().update(message.record["id"], {"reply_time": formatted_time})
+                    time_diff = int((reply_dt - fwd_dt).total_seconds())
+                    db.get_table().update(message.record["id"], {"reply_time": time_diff})
                 except Exception as e:
                     print(f"Failed to record first reply time diff: {e}")
         else:

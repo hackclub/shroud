@@ -32,9 +32,8 @@ def handle_reaction_added(event, client: WebClient):
             if forwarded_time:
                 fwd_dt = datetime.datetime.fromtimestamp(float(forwarded_time), tz=datetime.timezone.utc)
                 now_dt = datetime.datetime.now(datetime.timezone.utc)
-                time_diff = (now_dt - fwd_dt).total_seconds()
-                formatted_time = str(datetime.timedelta(seconds=int(time_diff)))
-                db.get_table().update(record["id"], {"resolve_time": formatted_time})
+                time_diff = int((now_dt - fwd_dt).total_seconds())
+                db.get_table().update(record["id"], {"resolve_time": time_diff})
         except Exception as e:
             print(f"Failed to set resolve_time: {e}")
 
@@ -69,7 +68,7 @@ def handle_reaction_removed(event, client: WebClient):
                 )
                 # Set resolve_time in db to blank string
                 try:
-                    db.get_table().update(record["id"], {"resolve_time": ""})
+                    db.get_table().update(record["id"], {"resolve_time": None})
                 except Exception as e:
                     print(f"Failed to reset resolve_time: {e}")
         except Exception as e:

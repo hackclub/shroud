@@ -48,6 +48,24 @@ def get_name(user_id: str, client: WebClient) -> str:
 
 
 def begin_forward(message: "MessageEvent", client: WebClient) -> None:
+    options = [
+        {
+            "text": {"type": "plain_text", "text": "Forward with Username"},
+            "value": "with_username",
+        },
+    ]
+    if not settings.disable_anonymous:
+        options.insert(0, {
+            "text": {"type": "plain_text", "text": "Forward Anonymously"},
+            "value": "anonymous",
+        })
+
+    prompt_text = (
+        "Do you want to forward this report with your username?"
+        if settings.disable_anonymous
+        else "Do you want to forward this report anonymously or with your username?"
+    )
+
     selection_prompt = client.chat_postMessage(
         channel=message.channel,
         text="Select how this message should be forwarded",
@@ -57,28 +75,13 @@ def begin_forward(message: "MessageEvent", client: WebClient) -> None:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "Do you want to forward this report anonymously or with your username?",
+                    "text": prompt_text,
                 },
                 "accessory": {
                     "type": "static_select",
                     "action_id": "report_forwarding",
                     "placeholder": {"type": "plain_text", "text": "Choose an option"},
-                    "options": [
-                        {
-                            "text": {
-                                "type": "plain_text",
-                                "text": "Forward Anonymously",
-                            },
-                            "value": "anonymous",
-                        },
-                        {
-                            "text": {
-                                "type": "plain_text",
-                                "text": "Forward with Username",
-                            },
-                            "value": "with_username",
-                        },
-                    ],
+                    "options": options,
                 },
             },
             {

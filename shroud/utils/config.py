@@ -51,6 +51,10 @@ settings.validators.register(
             "app_name",
             default="shroud",
         ),
+        Validator(
+            "disable_anonymous",
+            default=False,
+        ),
     ],
 )
 

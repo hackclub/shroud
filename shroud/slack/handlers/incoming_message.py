@@ -126,12 +126,15 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
                 subtype=subtype,
             )
             if message.record and message.is_dm:
-                utils.forward_files(event.get("files", []), settings.channel, message.record["fields"]["forwarded_ts"], client)
+                forwarded_ts = message.record["fields"].get("forwarded_ts")
+                if not forwarded_ts:
+                    return
+                utils.forward_files(event.get("files", []), settings.channel, forwarded_ts, client)
                 if message.content:
                     client.chat_postMessage(
                         channel=settings.channel,
                         text=message.content,
-                        thread_ts=message.record["fields"]["forwarded_ts"],
+                        thread_ts=forwarded_ts,
                     )
                 try:
                     client.reactions_add(channel=message.channel, name="white_check_mark", timestamp=message.ts)
@@ -209,11 +212,16 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
     ):
         utils.begin_forward(message, client)
     elif message.record is not None and message.is_dm:
+        forwarded_ts = message.record["fields"].get("forwarded_ts")
+        if not forwarded_ts:
+            # Report is still pending user's forwarding selection (e.g., Slack unfurled a link)
+            return
         client.chat_postMessage(
             channel=settings.channel,
             text=message.content,
-            attachments=message.attachments,
-            thread_ts=message.record["fields"]["forwarded_ts"],
+            unfurl_links=True,
+            unfurl_media=True,
+            thread_ts=forwarded_ts,
         )
         # Add :white_check_mark: reaction to the DM message
         try:

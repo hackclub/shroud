@@ -43,6 +43,7 @@ oauth_config:
 settings:
   event_subscriptions:
     bot_events:
+      - message.channels
       - message.groups
       - message.im
       - reaction_added

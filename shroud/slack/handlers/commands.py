@@ -236,7 +236,8 @@ def unresolved_command(ack, respond: Respond, command, client: WebClient):
         else:
             age_str = f"{minutes}m"
         
-        link = f"https://hackclub.slack.com/archives/{settings.channel}/p{forwarded_ts.replace('.', '')}"
+        record_channel = utils.get_forwarded_channel(forwarded_ts, client)
+        link = f"https://hackclub.slack.com/archives/{record_channel}/p{forwarded_ts.replace('.', '')}"
         list_items.append({
             "type": "rich_text_section",
             "elements": [

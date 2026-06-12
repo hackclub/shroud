@@ -44,6 +44,12 @@ settings.validators.register(
 
         # Optional settings
         Validator(
+            "old_channel",
+            default=None,
+            condition=lambda x: x is None or re.match(r"^[CG][A-Z0-9]{10}$", x) is not None,
+            messages={"condition": "Must look like C123ABC456 or G123ABC456"},
+        ),
+        Validator(
             "leading_help_text",
             default="",
         ),

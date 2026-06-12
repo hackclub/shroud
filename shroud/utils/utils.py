@@ -117,6 +117,17 @@ def begin_forward(message: "MessageEvent", client: WebClient) -> None:
 #     return "thread_ts" in event
 #     # return "thread_ts" in event or "thread_ts" in event.get("previous_message", {})
 
+def get_forwarded_channel(forwarded_ts: str, client: WebClient) -> str:
+    """Return the channel that owns a forwarded thread by probing candidates in order."""
+    for channel in filter(None, [settings.channel, settings.old_channel]):
+        try:
+            if get_message_by_ts(forwarded_ts, channel, client):
+                return channel
+        except Exception:
+            pass
+    return settings.channel
+
+
 def forward_files(files: list[dict[str, Any]], channel: str, thread_ts: str, client: WebClient) -> None:
     for file_data in files:
         url = file_data.get("url_private_download") or file_data.get("url_private")

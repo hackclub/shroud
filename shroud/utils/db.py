@@ -41,14 +41,18 @@ def clean_database(client: WebClient) -> None:
                 )
                 data1 = cast(dict[str, Any], resp1.data)
                 messages.extend(cast(list[dict[str, Any]], data1.get("messages", [])))
-                resp2 = client.conversations_history(
-                    channel=settings.channel,
-                    inclusive=True,
-                    oldest=r["forwarded_ts"],
-                    limit=1,
-                )
-                data2 = cast(dict[str, Any], resp2.data)
-                messages.extend(cast(list[dict[str, Any]], data2.get("messages", [])))
+                fwd_msg = None
+                for candidate in filter(None, [settings.channel, settings.old_channel]):
+                    try:
+                        resp = client.conversations_history(channel=candidate, oldest=r["forwarded_ts"], inclusive=True, limit=1)
+                        msgs = cast(list[dict[str, Any]], cast(dict[str, Any], resp.data).get("messages", []))
+                        if msgs:
+                            fwd_msg = msgs[0]
+                            break
+                    except Exception:
+                        pass
+                if fwd_msg:
+                    messages.append(fwd_msg)
             except KeyError:
                 table.delete(full_record["id"])
                 continue

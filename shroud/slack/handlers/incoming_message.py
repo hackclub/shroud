@@ -129,10 +129,11 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
                 forwarded_ts = message.record["fields"].get("forwarded_ts")
                 if not forwarded_ts:
                     return
-                utils.forward_files(event.get("files", []), settings.channel, forwarded_ts, client)
+                fwd_channel = utils.get_forwarded_channel(forwarded_ts, client)
+                utils.forward_files(event.get("files", []), fwd_channel, forwarded_ts, client)
                 if message.content:
                     client.chat_postMessage(
-                        channel=settings.channel,
+                        channel=fwd_channel,
                         text=message.content,
                         thread_ts=forwarded_ts,
                     )
@@ -216,8 +217,9 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
         if not forwarded_ts:
             # Report is still pending user's forwarding selection (e.g., Slack unfurled a link)
             return
+        fwd_channel = utils.get_forwarded_channel(forwarded_ts, client)
         client.chat_postMessage(
-            channel=settings.channel,
+            channel=fwd_channel,
             text=message.content,
             unfurl_links=True,
             unfurl_media=True,

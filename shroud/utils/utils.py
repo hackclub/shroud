@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 def get_message_by_ts(ts: str, channel: str, client: WebClient) -> dict[str, Any] | None:
     try:
         resp = client.conversations_history(
-            channel=channel, oldest=ts, inclusive=True, limit=1
+            channel=channel, oldest=ts, latest=ts, inclusive=True, limit=1
         )
         data = cast(dict[str, Any], resp.data)
         messages = cast(list[dict[str, Any]], data.get("messages", []))

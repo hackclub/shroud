@@ -44,7 +44,7 @@ def clean_database(client: WebClient) -> None:
                 fwd_msg = None
                 for candidate in filter(None, [settings.channel, settings.old_channel]):
                     try:
-                        resp = client.conversations_history(channel=candidate, oldest=r["forwarded_ts"], inclusive=True, limit=1)
+                        resp = client.conversations_history(channel=candidate, oldest=r["forwarded_ts"], latest=r["forwarded_ts"], inclusive=True, limit=1)
                         msgs = cast(list[dict[str, Any]], cast(dict[str, Any], resp.data).get("messages", []))
                         if msgs:
                             fwd_msg = msgs[0]

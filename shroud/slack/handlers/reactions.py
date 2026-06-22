@@ -4,6 +4,8 @@ from slack_sdk import WebClient
 from shroud.slack import app
 from shroud.utils import db
 
+MERGE_REACTION = "repeat"
+
 # Listen for reaction_added events to remove :hourglass: if :white_check_mark: or :x: is added
 @app.event("reaction_added")
 def handle_reaction_added(event, client: WebClient):
@@ -11,6 +13,17 @@ def handle_reaction_added(event, client: WebClient):
     item = event.get("item", {})
     channel = item.get("channel")
     ts = item.get("ts")
+    # if lyla merged this case into another drop the :hourglass:
+    # don't record a resolve_time as a merged report isn't resolved so its time belongs to the surviving case
+    if reaction == MERGE_REACTION:
+        record = db.get_message_by_ts(ts)
+        if not record:
+            return
+        try:
+            client.reactions_remove(channel=channel, name="hourglass", timestamp=ts)
+        except Exception as e:
+            print(f"Failed to remove :hourglass: reaction on merge: {e}")
+        return
     # Only act on :white_check_mark: or :x:
     if reaction in ("white_check_mark", "x"):
         # Only care if the message thread is in the database

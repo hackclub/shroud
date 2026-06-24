@@ -258,7 +258,7 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
                     channel=message.channel,
                     user=message.user,
                     thread_ts=message.ts,
-                    text="Cannot reply to an FD report.",
+                    text="Cannot reply to a report from Prometheus.",
                 )
             else:
                 client.chat_postMessage(

@@ -44,6 +44,10 @@ settings.validators.register(
 
         # Optional settings
         Validator(
+            "trusted_auto_forward",
+            default=[],
+        ),
+        Validator(
             "old_channel",
             default=None,
             condition=lambda x: x is None or re.match(r"^[CG][A-Z0-9]{10}$", x) is not None,

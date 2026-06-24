@@ -146,6 +146,30 @@ def forward_files(files: list[dict[str, Any]], channel: str, thread_ts: str, cli
         )
 
 
+def auto_forward(message: "MessageEvent", client: WebClient) -> None:
+    post_resp = client.chat_postMessage(
+        channel=settings.channel,
+        text=message.content,
+        unfurl_links=True,
+        unfurl_media=True,
+    )
+    post_data = cast(dict[str, Any], post_resp.data)
+    forwarded_ts = str(post_data.get("ts", ""))
+
+    try:
+        client.reactions_add(channel=settings.channel, name="hourglass", timestamp=forwarded_ts)
+    except Exception as e:
+        print(f"Failed to add hourglass reaction: {e}")
+
+    try:
+        client.reactions_add(channel=message.channel, name="white_check_mark", timestamp=message.ts)
+    except Exception as e:
+        print(f"Failed to add checkmark reaction to DM: {e}")
+
+    db.save_forward_start(dm_ts=message.ts, content=message.content or "", dm_channel=message.channel)
+    db.finish_forward(dm_ts=message.ts, forwarded_ts=forwarded_ts)
+
+
 def apply_command_prefix(command: str) -> str:
     command = f"/{settings.app_name}-{command}"
     print(f"Adding command {command}")

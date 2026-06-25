@@ -67,13 +67,17 @@ def clean_database(client: WebClient) -> None:
                     break
 
 
-def save_forward_start(content: str, dm_ts: str, dm_channel: str, selection_ts: str = "") -> None:
+def save_forward_start(content: str, dm_ts: str, selection_ts: str, dm_channel: str) -> None:
     global table
     assert table is not None, "Database table not initialized"
-    record: dict[str, str] = {"dm_ts": dm_ts, "content": content, "dm_channel": dm_channel}
-    if selection_ts:
-        record["selection_ts"] = selection_ts
-    table.create(record)
+    table.create(
+        {
+            "dm_ts": dm_ts,
+            "content": content,
+            "selection_ts": selection_ts,
+            "dm_channel": dm_channel,
+        }
+    )
 
 
 def finish_forward(dm_ts, forwarded_ts) -> None:

@@ -24,7 +24,7 @@ def get_table() -> Table:
 
 def get_api_client(app_slug: str) -> dict | None:
     api = Api(api_key=settings.airtable_token)
-    api_clients_table = api.table(settings.airtable_base_id, settings.airtable_api_clients_table_name)
+    api_clients_table = api.table(settings.airtable_base_id, "api_clients")
     return api_clients_table.first(formula=match({"app_slug": app_slug}))
 
 

@@ -52,10 +52,6 @@ settings.validators.register(
             default=8080,
         ),
         Validator(
-            "airtable_api_clients_table_name",
-            default=None,
-        ),
-        Validator(
             "old_channel",
             default=None,
             condition=lambda x: x is None or re.match(r"^[CG][A-Z0-9]{10}$", x) is not None,

@@ -247,35 +247,40 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
             return
         prefix_info = message.get_prefix_info
         if prefix_info.should_forward:
-            client.chat_postMessage(
-                channel=message.record["fields"]["dm_channel"],
-                thread_ts=message.record["fields"]["dm_ts"],
-                text=prefix_info.content_without_prefix,
-                username=utils.get_name(message.user, client),
-                icon_url=utils.get_profile_picture_url(message.user, client),
-            )
-            # Add :white_check_mark: reaction to the channel message
-            try:
-                client.reactions_add(
+            dm_channel = message.record["fields"].get("dm_channel", "")
+            if not dm_channel:
+                client.chat_postEphemeral(
                     channel=message.channel,
-                    name="white_check_mark",
-                    timestamp=message.ts
+                    user=message.user,
+                    thread_ts=message.ts,
+                    text="This ticket was created by an automated system and cannot be replied to.",
                 )
-            except Exception as e:
-                print(f"Failed to add checkmark reaction to channel message: {e}")
-            if (
-                not message.record["fields"].get("reply_time")
-            ):
-                # This is the first reply to the forwarded message
-                forwarded_time = message.record["fields"].get("forwarded_ts")
-                reply_time = message.ts
+            else:
+                client.chat_postMessage(
+                    channel=dm_channel,
+                    thread_ts=message.record["fields"]["dm_ts"],
+                    text=prefix_info.content_without_prefix,
+                    username=utils.get_name(message.user, client),
+                    icon_url=utils.get_profile_picture_url(message.user, client),
+                )
                 try:
-                    fwd_dt = datetime.datetime.fromtimestamp(float(forwarded_time), tz=datetime.timezone.utc)
-                    reply_dt = datetime.datetime.fromtimestamp(float(reply_time), tz=datetime.timezone.utc)
-                    time_diff = int((reply_dt - fwd_dt).total_seconds())
-                    db.get_table().update(message.record["id"], {"reply_time": time_diff})
+                    client.reactions_add(
+                        channel=message.channel,
+                        name="white_check_mark",
+                        timestamp=message.ts
+                    )
                 except Exception as e:
-                    print(f"Failed to record first reply time diff: {e}")
+                    print(f"Failed to add checkmark reaction to channel message: {e}")
+                if not message.record["fields"].get("reply_time"):
+                    forwarded_time = message.record["fields"].get("forwarded_ts")
+                    reply_time = message.ts
+                    try:
+                        fwd_dt = datetime.datetime.fromtimestamp(float(forwarded_time), tz=datetime.timezone.utc)
+                        reply_dt = datetime.datetime.fromtimestamp(float(reply_time), tz=datetime.timezone.utc)
+                        time_diff = int((reply_dt - fwd_dt).total_seconds())
+                        db.get_table().update(message.record["id"], {"reply_time": time_diff})
+                    except Exception as e:
+                        print(f"Failed to record first reply time diff: {e}")
         else:
             print("INFO: received a message not prefixed with `!` or `?`; ignoring it.")
     else:

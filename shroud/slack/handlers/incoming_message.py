@@ -212,10 +212,7 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
         and message.is_dm
         and message.subtype == MessageEvent.Subtypes.normal
     ):
-        if message.user in (settings.trusted_auto_forward or []):
-            utils.auto_forward(message, client)
-        else:
-            utils.begin_forward(message, client)
+        utils.begin_forward(message, client)
     elif message.record is not None and message.is_dm:
         forwarded_ts = message.record["fields"].get("forwarded_ts")
         if not forwarded_ts:
@@ -250,17 +247,13 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
             return
         prefix_info = message.get_prefix_info
         if prefix_info.should_forward:
-            dm_channel = message.record["fields"]["dm_channel"]
-            is_fd_report = any(
-                client.conversations_open(users=u).data.get("channel", {}).get("id") == dm_channel
-                for u in (settings.trusted_auto_forward or [])
-            )
-            if is_fd_report:
+            dm_channel = message.record["fields"].get("dm_channel", "")
+            if not dm_channel:
                 client.chat_postEphemeral(
                     channel=message.channel,
                     user=message.user,
                     thread_ts=message.ts,
-                    text="Cannot reply to a report from Prometheus.",
+                    text="This ticket was created by an automated system and cannot be replied to.",
                 )
             else:
                 client.chat_postMessage(
@@ -270,7 +263,6 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
                     username=utils.get_name(message.user, client),
                     icon_url=utils.get_profile_picture_url(message.user, client),
                 )
-                # Add :white_check_mark: reaction to the channel message
                 try:
                     client.reactions_add(
                         channel=message.channel,

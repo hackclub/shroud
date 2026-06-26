@@ -5,11 +5,9 @@ channel="C0BE6N4G2BA"
 old_channels = ["G01DBHPLK25", "C07FL3G62LF"]
 leading_help_text = "To file a report, just DM this bot with your report. You'll be asked to select if you want your report to be anonymous or not"
 app_name = "shroud" # If this isn't sppecified, the default is "shroud" meaning the command would be "/shroud-..."
-trusted_auto_forward = ["U0AKQNSKBK4"]
 
 [development]
 airtable_table_name = "tbllFyDNwnXlTCMVl"
 app_name = "dev-shroud"
 airtable_base_id  = "apphYndkize7YybCs"
 channel = "C07JX2TK0UX"
-trusted_auto_forward = ["U0AKQNSKBK4"]

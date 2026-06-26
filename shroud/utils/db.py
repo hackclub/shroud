@@ -22,6 +22,24 @@ def get_table() -> Table:
     return table
 
 
+def get_api_client(app_slug: str) -> dict | None:
+    api = Api(api_key=settings.airtable_token)
+    api_clients_table = api.table(settings.airtable_base_id, "api_clients")
+    return api_clients_table.first(formula=match({"app_slug": app_slug}))
+
+
+def save_api_report(content: str, forwarded_ts: str, source: str) -> None:
+    global table
+    assert table is not None, "Database table not initialized"
+    table.create({
+        "dm_ts": forwarded_ts,
+        "dm_channel": "",
+        "content": content,
+        "forwarded_ts": forwarded_ts,
+        "source": source,
+    })
+
+
 def clean_database(client: WebClient) -> None:
     """
     If either the DM or the forwarded message no longer exists, remove the record from the database
@@ -33,15 +51,17 @@ def clean_database(client: WebClient) -> None:
         for full_record in list_of_records:
             messages = []
             r = full_record["fields"]
+            dm_channel = r.get("dm_channel", "")
             try:
-                resp1 = client.conversations_history(
-                    channel=r["dm_channel"],
-                    inclusive=True,
-                    oldest=r["dm_ts"],
-                    limit=1,
-                )
-                data1 = cast(dict[str, Any], resp1.data)
-                messages.extend(cast(list[dict[str, Any]], data1.get("messages", [])))
+                if dm_channel:
+                    resp1 = client.conversations_history(
+                        channel=dm_channel,
+                        inclusive=True,
+                        oldest=r["dm_ts"],
+                        limit=1,
+                    )
+                    data1 = cast(dict[str, Any], resp1.data)
+                    messages.extend(cast(list[dict[str, Any]], data1.get("messages", [])))
                 fwd_msg = None
                 for channel in utils.report_thread_channels():
                     try:
@@ -57,8 +77,9 @@ def clean_database(client: WebClient) -> None:
             except KeyError:
                 table.delete(full_record["id"])
                 continue
-            
-            if len(messages) < 2:
+
+            min_messages = 2 if dm_channel else 1
+            if len(messages) < min_messages:
                 table.delete(full_record["id"])
 
             for m in messages:
@@ -67,13 +88,17 @@ def clean_database(client: WebClient) -> None:
                     break
 
 
-def save_forward_start(content: str, dm_ts: str, dm_channel: str, selection_ts: str = "") -> None:
+def save_forward_start(content: str, dm_ts: str, selection_ts: str, dm_channel: str) -> None:
     global table
     assert table is not None, "Database table not initialized"
-    record: dict[str, str] = {"dm_ts": dm_ts, "content": content, "dm_channel": dm_channel}
-    if selection_ts:
-        record["selection_ts"] = selection_ts
-    table.create(record)
+    table.create(
+        {
+            "dm_ts": dm_ts,
+            "content": content,
+            "selection_ts": selection_ts,
+            "dm_channel": dm_channel,
+        }
+    )
 
 
 def finish_forward(dm_ts, forwarded_ts) -> None:

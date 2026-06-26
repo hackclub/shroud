@@ -58,6 +58,10 @@ settings.validators.register(
             messages={"condition": "Must look like C123ABC456 or G123ABC456"},
         ),
         Validator(
+            "old_channels",
+            default=None,
+        ),
+        Validator(
             "leading_help_text",
             default="",
         ),

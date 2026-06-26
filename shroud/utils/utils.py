@@ -128,6 +128,17 @@ def get_forwarded_channel(forwarded_ts: str, client: WebClient) -> str:
     return settings.channel
 
 
+_VALID_ATTACHMENT_KEYS = {
+    "fallback", "color", "pretext", "author_name", "author_link", "author_icon",
+    "title", "title_link", "text", "fields", "image_url", "thumb_url",
+    "footer", "footer_icon", "ts", "mrkdwn_in", "actions", "callback_id",
+    "attachment_type",
+}
+
+def sanitize_attachments(attachments: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [{k: v for k, v in a.items() if k in _VALID_ATTACHMENT_KEYS} for a in attachments]
+
+
 def forward_files(files: list[dict[str, Any]], channel: str, thread_ts: str, client: WebClient) -> None:
     for file_data in files:
         url = file_data.get("url_private_download") or file_data.get("url_private")
@@ -149,7 +160,8 @@ def forward_files(files: list[dict[str, Any]], channel: str, thread_ts: str, cli
 def auto_forward(message: "MessageEvent", client: WebClient) -> None:
     post_resp = client.chat_postMessage(
         channel=settings.channel,
-        text=message.content,
+        text=message.content or "(forwarded message)",
+        attachments=sanitize_attachments(message.attachments) if message.attachments else None,
         unfurl_links=True,
         unfurl_media=True,
     )

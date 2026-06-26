@@ -117,9 +117,21 @@ def begin_forward(message: "MessageEvent", client: WebClient) -> None:
 #     return "thread_ts" in event
 #     # return "thread_ts" in event or "thread_ts" in event.get("previous_message", {})
 
+def report_thread_channels() -> list[str]:
+    channels: list[str] = []
+    seen: set[str] = set()
+    for channel in [
+        settings.channel,
+        *(settings.old_channels or []),
+        settings.old_channel,
+    ]:
+        if channel and channel not in seen:
+            seen.add(channel)
+            channels.append(channel)
+    return channels
+
 def get_forwarded_channel(forwarded_ts: str, client: WebClient) -> str:
-    """Return the channel that owns a forwarded thread by probing candidates in order."""
-    for channel in filter(None, [settings.channel, settings.old_channel]):
+    for channel in report_thread_channels():
         try:
             if get_message_by_ts(forwarded_ts, channel, client):
                 return channel

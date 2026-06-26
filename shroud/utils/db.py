@@ -26,6 +26,7 @@ def clean_database(client: WebClient) -> None:
     """
     If either the DM or the forwarded message no longer exists, remove the record from the database
     """
+    from shroud.utils import utils
     global table
     assert table is not None, "Database table not initialized"
     for list_of_records in table.iterate():
@@ -42,9 +43,9 @@ def clean_database(client: WebClient) -> None:
                 data1 = cast(dict[str, Any], resp1.data)
                 messages.extend(cast(list[dict[str, Any]], data1.get("messages", [])))
                 fwd_msg = None
-                for candidate in filter(None, [settings.channel, settings.old_channel]):
+                for channel in utils.report_thread_channels():
                     try:
-                        resp = client.conversations_history(channel=candidate, oldest=r["forwarded_ts"], latest=r["forwarded_ts"], inclusive=True, limit=1)
+                        resp = client.conversations_history(channel=channel, oldest=r["forwarded_ts"], latest=r["forwarded_ts"], inclusive=True, limit=1)
                         msgs = cast(list[dict[str, Any]], cast(dict[str, Any], resp.data).get("messages", []))
                         if msgs:
                             fwd_msg = msgs[0]

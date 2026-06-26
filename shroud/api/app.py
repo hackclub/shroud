@@ -11,6 +11,7 @@ api_app = FastAPI()
 
 class ReportRequest(BaseModel):
     content: str
+    blocks: list[dict[str, Any]] | None = None
 
 
 @api_app.post("/api/v1/reports")
@@ -20,6 +21,7 @@ def create_report(body: ReportRequest, source: str = Depends(verify_token)):
     resp = client.chat_postMessage(
         channel=settings.channel,
         text=body.content,
+        blocks=body.blocks,
         unfurl_links=True,
         unfurl_media=True,
     )

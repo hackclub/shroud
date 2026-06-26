@@ -34,6 +34,7 @@ def handle_submission(ack, body, say, client: WebClient):
         if message is None:
             return
         original_text = message["text"]
+        original_attachments = message.get("attachments", [])
 
         # TODO: Update the message instead of sending a new one (perhaps)
         # if user_selection == "anonymous":
@@ -60,7 +61,8 @@ def handle_submission(ack, body, say, client: WebClient):
 
         post_resp = client.chat_postMessage(
             channel=settings.channel,
-            text=original_text,
+            text=original_text or "(forwarded message)",
+            attachments=utils.sanitize_attachments(original_attachments) if original_attachments else None,
             unfurl_links=True,
             unfurl_media=True,
             username=utils.get_name(user_id, client)

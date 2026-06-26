@@ -168,6 +168,7 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
                 user=event.get("user"),
                 content=event["text"],
                 subtype=subtype,
+                attachments=event.get("attachments", []),
             )
         case MessageEvent.Subtypes.message_changed:
             user = event["message"]["user"]
@@ -223,7 +224,8 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
         fwd_channel = utils.get_forwarded_channel(forwarded_ts, client)
         client.chat_postMessage(
             channel=fwd_channel,
-            text=message.content,
+            text=message.content or "(forwarded message)",
+            attachments=utils.sanitize_attachments(message.attachments) if message.attachments else None,
             unfurl_links=True,
             unfurl_media=True,
             thread_ts=forwarded_ts,

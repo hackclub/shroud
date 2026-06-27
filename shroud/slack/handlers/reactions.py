@@ -14,7 +14,7 @@ def handle_reaction_added(event, client: WebClient):
     channel = item.get("channel")
     ts = item.get("ts")
     # if lyla merged this case into another drop the :hourglass:
-    # don't record a resolve_time as a merged report isn't resolved so its time belongs to the surviving case
+    # marks it merged so it no longer counts as open
     if reaction == MERGE_REACTION:
         record = db.get_message_by_ts(ts)
         if not record:
@@ -23,6 +23,10 @@ def handle_reaction_added(event, client: WebClient):
             client.reactions_remove(channel=channel, name="hourglass", timestamp=ts)
         except Exception as e:
             print(f"Failed to remove :hourglass: reaction on merge: {e}")
+        try:
+            db.get_table().update(record["id"], {"merged": True})
+        except Exception as e:
+            print(f"Failed to mark case as merged: {e}")
         return
     # Only act on :white_check_mark: or :x:
     if reaction in ("white_check_mark", "x"):
@@ -73,12 +77,12 @@ def handle_reaction_removed(event, client: WebClient):
             check_count = next((r["count"] for r in reactions if r["name"] == "white_check_mark"), 0)
             x_count = next((r["count"] for r in reactions if r["name"] == "x"), 0)
             if check_count == 0 and x_count == 0:
-                # Re-add :hourglass: if neither is present
-                client.reactions_add(
-                    channel=channel,
-                    name="hourglass",
-                    timestamp=ts
-                )
+                if not record["fields"].get("merged"):
+                    client.reactions_add(
+                        channel=channel,
+                        name="hourglass",
+                        timestamp=ts
+                    )
                 # Set resolve_time in db to blank string
                 try:
                     db.get_table().update(record["id"], {"resolve_time": None})
@@ -86,3 +90,18 @@ def handle_reaction_removed(event, client: WebClient):
                     print(f"Failed to reset resolve_time: {e}")
         except Exception as e:
             print(f"Failed to re-add :hourglass: reaction: {e}")
+    if reaction == MERGE_REACTION:
+        record = db.get_message_by_ts(ts)
+        if not record:
+            return
+        if record["fields"].get("resolve_time"):
+            return
+        try:
+            client.reactions_add(
+                channel=channel,
+                name="hourglass",
+                timestamp=ts
+            )
+            db.get_table().update(record["id"], {"merged": False})
+        except Exception as e:
+            print(f"Failed to undo merge: {e}")

@@ -1,10 +1,16 @@
 import datetime
+import re
 from typing import Any, cast
 from slack_sdk import WebClient
 from shroud.slack import app
 from shroud.utils import db
 
 MERGE_REACTION = "repeat"
+
+TICK_REACTIONS = ["heavy_check_mark", "white_tick", "white_check_mark", "check"]
+X_REACTIONS = ["x"]
+def is_tick_reaction(reaction: str) -> bool:
+    return reaction in TICK_REACTIONS or bool(re.match(r"^check-.+", reaction))
 
 # Listen for reaction_added events to remove :hourglass: if :white_check_mark: or :x: is added
 @app.event("reaction_added")
@@ -14,7 +20,7 @@ def handle_reaction_added(event, client: WebClient):
     channel = item.get("channel")
     ts = item.get("ts")
     # if lyla merged this case into another drop the :hourglass:
-    # don't record a resolve_time as a merged report isn't resolved so its time belongs to the surviving case
+    # marks it merged so it no longer counts as open
     if reaction == MERGE_REACTION:
         record = db.get_message_by_ts(ts)
         if not record:
@@ -23,9 +29,13 @@ def handle_reaction_added(event, client: WebClient):
             client.reactions_remove(channel=channel, name="hourglass", timestamp=ts)
         except Exception as e:
             print(f"Failed to remove :hourglass: reaction on merge: {e}")
+        try:
+            db.get_table().update(record["id"], {"merged": True})
+        except Exception as e:
+            print(f"Failed to mark case as merged: {e}")
         return
-    # Only act on :white_check_mark: or :x:
-    if reaction in ("white_check_mark", "x"):
+    # act on any tick reaction or :x:
+    if is_tick_reaction(reaction) or reaction in X_REACTIONS:
         # Only care if the message thread is in the database
         record = db.get_message_by_ts(ts)
         if not record:
@@ -57,8 +67,8 @@ def handle_reaction_removed(event, client: WebClient):
     item = event.get("item", {})
     channel = item.get("channel")
     ts = item.get("ts")
-    # Only act if :white_check_mark: or :x: is removed
-    if reaction in ("white_check_mark", "x"):
+    # Only act if a tick reaction or :x: is removed
+    if is_tick_reaction(reaction) or reaction in X_REACTIONS:
         # Only care if the message thread is in the database
         record = db.get_message_by_ts(ts)
         if not record:
@@ -70,15 +80,15 @@ def handle_reaction_removed(event, client: WebClient):
             message_data = cast(dict[str, Any], data.get("message", {}))
             reactions = cast(list[dict[str, Any]], message_data.get("reactions", []))
             # Count all check mark and x reactions
-            check_count = next((r["count"] for r in reactions if r["name"] == "white_check_mark"), 0)
-            x_count = next((r["count"] for r in reactions if r["name"] == "x"), 0)
+            check_count = sum(r["count"] for r in reactions if is_tick_reaction(r["name"]))
+            x_count = sum(r["count"] for r in reactions if r["name"] in X_REACTIONS)
             if check_count == 0 and x_count == 0:
-                # Re-add :hourglass: if neither is present
-                client.reactions_add(
-                    channel=channel,
-                    name="hourglass",
-                    timestamp=ts
-                )
+                if not record["fields"].get("merged"):
+                    client.reactions_add(
+                        channel=channel,
+                        name="hourglass",
+                        timestamp=ts
+                    )
                 # Set resolve_time in db to blank string
                 try:
                     db.get_table().update(record["id"], {"resolve_time": None})
@@ -86,3 +96,18 @@ def handle_reaction_removed(event, client: WebClient):
                     print(f"Failed to reset resolve_time: {e}")
         except Exception as e:
             print(f"Failed to re-add :hourglass: reaction: {e}")
+    if reaction == MERGE_REACTION:
+        record = db.get_message_by_ts(ts)
+        if not record:
+            return
+        if record["fields"].get("resolve_time"):
+            return
+        try:
+            client.reactions_add(
+                channel=channel,
+                name="hourglass",
+                timestamp=ts
+            )
+            db.get_table().update(record["id"], {"merged": False})
+        except Exception as e:
+            print(f"Failed to undo merge: {e}")

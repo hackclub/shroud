@@ -24,6 +24,8 @@ def handle_submission(ack, body, say, client: WebClient):
     message_record = db.get_message_by_ts(body["message"]["ts"])
     if message_record is None:
         return
+    if message_record["fields"].get("forwarded_ts"):
+        return
     user_selection = message_record.get("fields", {}).get("selection", None)
     if user_selection is not None:
         message = utils.get_message_by_ts(

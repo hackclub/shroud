@@ -3,7 +3,30 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-#    restart: unless-stopped
     tty: true
     environment:
       - ENV_FOR_DYNACONF=production
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/shroud
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: shroud
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

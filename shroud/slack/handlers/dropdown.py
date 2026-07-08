@@ -149,7 +149,7 @@ def handle_cancellation(ack, body, client: WebClient):
         )
 
         # Delete the incomplete database entry
-        db.get_table().delete(message_record["id"])
+        db.delete_record(message_record["id"])
 
         # Send confirmation to the user
         client.chat_postEphemeral(

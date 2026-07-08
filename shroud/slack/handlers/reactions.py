@@ -30,7 +30,7 @@ def handle_reaction_added(event, client: WebClient):
         except Exception as e:
             print(f"Failed to remove :hourglass: reaction on merge: {e}")
         try:
-            db.get_table().update(record["id"], {"merged": True})
+            db.update_fields(record["id"], {"merged": True})
         except Exception as e:
             print(f"Failed to mark case as merged: {e}")
         return
@@ -56,7 +56,7 @@ def handle_reaction_added(event, client: WebClient):
                 fwd_dt = datetime.datetime.fromtimestamp(float(forwarded_time), tz=datetime.timezone.utc)
                 now_dt = datetime.datetime.now(datetime.timezone.utc)
                 time_diff = int((now_dt - fwd_dt).total_seconds())
-                db.get_table().update(record["id"], {"resolve_time": time_diff})
+                db.update_fields(record["id"], {"resolve_time": time_diff})
         except Exception as e:
             print(f"Failed to set resolve_time: {e}")
 
@@ -91,7 +91,7 @@ def handle_reaction_removed(event, client: WebClient):
                     )
                 # Set resolve_time in db to blank string
                 try:
-                    db.get_table().update(record["id"], {"resolve_time": None})
+                    db.update_fields(record["id"], {"resolve_time": None})
                 except Exception as e:
                     print(f"Failed to reset resolve_time: {e}")
         except Exception as e:
@@ -108,6 +108,6 @@ def handle_reaction_removed(event, client: WebClient):
                 name="hourglass",
                 timestamp=ts
             )
-            db.get_table().update(record["id"], {"merged": False})
+            db.update_fields(record["id"], {"merged": False})
         except Exception as e:
             print(f"Failed to undo merge: {e}")

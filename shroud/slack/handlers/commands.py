@@ -176,17 +176,14 @@ def unresolved_command(ack, respond: Respond, command, client: WebClient):
             respond("Invalid input. Usage: `/shroud-unresolved [days | all]`")
             return
     
-    table = db.get_table()
     now = datetime.datetime.now(datetime.timezone.utc)
-    
-    if all_time:
-        formula = "AND(NOT({resolve_time}), NOT({merged}), {forwarded_ts} != '')"
-    else:
+
+    cutoff_ts = None
+    if not all_time:
         cutoff = now - datetime.timedelta(days=days)
         cutoff_ts = str(cutoff.timestamp())
-        formula = f"AND(NOT({{resolve_time}}), NOT({{merged}}), {{forwarded_ts}} != '', {{forwarded_ts}} >= '{cutoff_ts}')"
-    records = table.all(formula=formula)
-    
+    records = db.query_unresolved(cutoff_ts)
+
     unresolved: list[tuple[datetime.datetime, str, str]] = []
     for record in records:
         fields = record["fields"]

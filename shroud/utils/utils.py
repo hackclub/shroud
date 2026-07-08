@@ -190,7 +190,7 @@ def auto_forward(message: "MessageEvent", client: WebClient) -> None:
     except Exception as e:
         print(f"Failed to add checkmark reaction to DM: {e}")
 
-    db.save_forward_start(dm_ts=message.ts, content=message.content or "", dm_channel=message.channel)
+    db.save_forward_start(dm_ts=message.ts, content=message.content or "", dm_channel=message.channel, is_auto_forward=True)
     db.finish_forward(dm_ts=message.ts, forwarded_ts=forwarded_ts)
 
 

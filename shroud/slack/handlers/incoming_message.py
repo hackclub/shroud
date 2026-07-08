@@ -5,7 +5,7 @@ from shroud import settings
 from shroud.slack import app
 from shroud.utils import db, utils
 from slack_bolt.context.respond import Respond
-from pydantic import BaseModel, StringConstraints, computed_field
+from pydantic import BaseModel, PrivateAttr, StringConstraints, computed_field
 from typing import Annotated, Any
 import datetime
 
@@ -47,11 +47,16 @@ class MessageEvent(BaseModel):
 
     subtype: Subtypes
 
+    _record_loaded: bool = PrivateAttr(default=False)
+    _record_value: dict[str, Any] | None = PrivateAttr(default=None)
+
     @computed_field
     @property
     def record(self) -> dict[str, Any] | None:
-        fetched_result = db.get_message_by_ts(self.thread_ts or self.ts)
-        return fetched_result
+        if not self._record_loaded:
+            self._record_value = db.get_message_by_ts(self.thread_ts or self.ts)
+            self._record_loaded = True
+        return self._record_value
 
     class Target(BaseModel):
         channel: Annotated[
@@ -98,12 +103,39 @@ class MessageEvent(BaseModel):
     # @<function_name>.setter can also be used with a @computed_field with the same function name
 
 
+def _notify_unavailable(event, client: WebClient) -> None:
+    channel = event.get("channel", "")
+    try:
+        if channel.startswith("D"):
+            user = event.get("user") or event.get("message", {}).get("user")
+            if user:
+                client.chat_postEphemeral(
+                    channel=channel,
+                    user=user,
+                    text="⚠️ The report system is temporarily unavailable. "
+                    "Please resend your message in a few minutes.",
+                )
+        else:
+            ts = event.get("ts") or event.get("message", {}).get("ts")
+            if ts:
+                client.reactions_add(channel=channel, name="warning", timestamp=ts)
+    except Exception as e:
+        print(f"Failed to notify about datastore outage: {e}")
+
+
 # https://api.slack.com/events/message.im
 @app.event("message")
 def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
     # Acknowledge the event
     ack()
+    try:
+        _dispatch_message(event, say, client, respond)
+    except db.BackendUnavailable as e:
+        print(f"ERROR: datastore unavailable; relay skipped: {e}")
+        _notify_unavailable(event, client)
 
+
+def _dispatch_message(event, say: Say, client: WebClient, respond: Respond):
     # Depending on the subtype, pull out appropriate data and initialize the message model
     # https://api.slack.com/events/message#subtypes
     subtype = MessageEvent.Subtypes(event.get("subtype"))
@@ -251,10 +283,7 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
         prefix_info = message.get_prefix_info
         if prefix_info.should_forward:
             dm_channel = message.record["fields"]["dm_channel"]
-            is_fd_report = any(
-                client.conversations_open(users=u).data.get("channel", {}).get("id") == dm_channel
-                for u in (settings.trusted_auto_forward or [])
-            )
+            is_fd_report = bool(message.record["fields"].get("is_auto_forward"))
             if is_fd_report:
                 client.chat_postEphemeral(
                     channel=message.channel,
@@ -286,7 +315,7 @@ def handle_message(event, say: Say, client: WebClient, respond: Respond, ack):
                         fwd_dt = datetime.datetime.fromtimestamp(float(forwarded_time), tz=datetime.timezone.utc)
                         reply_dt = datetime.datetime.fromtimestamp(float(reply_time), tz=datetime.timezone.utc)
                         time_diff = int((reply_dt - fwd_dt).total_seconds())
-                        db.get_table().update(message.record["id"], {"reply_time": time_diff})
+                        db.update_fields(message.record["id"], {"reply_time": time_diff})
                     except Exception as e:
                         print(f"Failed to record first reply time diff: {e}")
         else:

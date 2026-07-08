@@ -31,15 +31,27 @@ settings.validators.register(
         ),
         Validator(
             "airtable_token",
-            must_exist=True,
+            default=None,
         ),
         Validator(
             "airtable_base_id",
-            must_exist=True,
+            default=None,
         ),
         Validator(
             "airtable_table_name",
-            must_exist=True,
+            default=None,
+        ),
+        Validator(
+            "database_url",
+            default="postgresql://postgres:postgres@localhost:5432/shroud",
+        ),
+        Validator(
+            "airtable_fallback",
+            default=True,
+        ),
+        Validator(
+            "airtable_mirror",
+            default=True,
         ),
 
         # Optional settings

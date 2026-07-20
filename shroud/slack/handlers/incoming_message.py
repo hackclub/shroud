@@ -309,6 +309,14 @@ def _dispatch_message(event, say: Say, client: WebClient, respond: Respond):
                             )
                         except Exception as e:
                             print(f"Failed to add checkmark reaction to mark report resolved: {e}")
+                        try:
+                            client.reactions_remove(
+                                channel=message.channel,
+                                name="hourglass",
+                                timestamp=forwarded_ts,
+                            )
+                        except Exception as e:
+                            print(f"Failed to remove hourglass reaction: {e}")
                 else:
                     client.chat_postMessage(
                         channel=dm_channel,

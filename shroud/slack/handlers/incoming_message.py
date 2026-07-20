@@ -292,13 +292,31 @@ def _dispatch_message(event, say: Say, client: WebClient, respond: Respond):
                     text="Cannot reply to a report from Prometheus.",
                 )
             else:
-                client.chat_postMessage(
-                    channel=dm_channel,
-                    thread_ts=message.record["fields"]["dm_ts"],
-                    text=prefix_info.content_without_prefix,
-                    username=utils.get_name(message.user, client),
-                    icon_url=utils.get_profile_picture_url(message.user, client),
-                )
+                is_resolve_command = prefix_info.content_without_prefix.strip().lower() == "resolve"
+                if is_resolve_command:
+                    client.chat_postMessage(
+                        channel=dm_channel,
+                        thread_ts=message.record["fields"]["dm_ts"],
+                        text="Thanks for reporting! Your report has been marked as resolved, please reach out to us again if you've any inqueries.",
+                    )
+                    forwarded_ts = message.record["fields"].get("forwarded_ts")
+                    if forwarded_ts:
+                        try:
+                            client.reactions_add(
+                                channel=message.channel,
+                                name="white_check_mark",
+                                timestamp=forwarded_ts,
+                            )
+                        except Exception as e:
+                            print(f"Failed to add checkmark reaction to mark report resolved: {e}")
+                else:
+                    client.chat_postMessage(
+                        channel=dm_channel,
+                        thread_ts=message.record["fields"]["dm_ts"],
+                        text=prefix_info.content_without_prefix,
+                        username=utils.get_name(message.user, client),
+                        icon_url=utils.get_profile_picture_url(message.user, client),
+                    )
                 # Add :white_check_mark: reaction to the channel message
                 try:
                     client.reactions_add(

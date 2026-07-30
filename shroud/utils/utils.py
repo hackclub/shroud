@@ -60,6 +60,10 @@ def begin_forward(message: "MessageEvent", client: WebClient) -> None:
             "value": "anonymous",
         })
 
+    # Default to anonymous forwarding unless it's disabled, so submitting
+    # without touching the dropdown still does the right thing.
+    default_option = options[0]
+
     prompt_text = (
         "Do you want to forward this report with your username?"
         if settings.disable_anonymous
@@ -82,6 +86,7 @@ def begin_forward(message: "MessageEvent", client: WebClient) -> None:
                     "action_id": "report_forwarding",
                     "placeholder": {"type": "plain_text", "text": "Choose an option"},
                     "options": options,
+                    "initial_option": default_option,
                 },
             },
             {
@@ -110,7 +115,8 @@ def begin_forward(message: "MessageEvent", client: WebClient) -> None:
         dm_ts=message.ts,
         content=message.content or "",
         selection_ts=selection_ts,
-        dm_channel=message.channel
+        dm_channel=message.channel,
+        selection=default_option["value"],
     )
 
 # def is_thread(event: Dict[str, Any]) -> bool:

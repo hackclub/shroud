@@ -189,20 +189,22 @@ def save_forward_start(
     dm_channel: str,
     selection_ts: str = "",
     is_auto_forward: bool = False,
+    selection: str = "",
 ) -> None:
     row = _execute(
         """
-        INSERT INTO reports (dm_ts, content, dm_channel, selection_ts, is_auto_forward)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO reports (dm_ts, content, dm_channel, selection_ts, is_auto_forward, selection)
+        VALUES (%s, %s, %s, %s, %s, %s)
         ON CONFLICT (dm_ts) DO UPDATE SET
             content = EXCLUDED.content,
             dm_channel = EXCLUDED.dm_channel,
             selection_ts = COALESCE(EXCLUDED.selection_ts, reports.selection_ts),
             is_auto_forward = EXCLUDED.is_auto_forward,
+            selection = COALESCE(EXCLUDED.selection, reports.selection),
             updated_at = now()
         RETURNING id
         """,
-        (dm_ts, content, dm_channel, selection_ts or None, is_auto_forward),
+        (dm_ts, content, dm_channel, selection_ts or None, is_auto_forward, selection or None),
         fetch="one",
     )
     if row:

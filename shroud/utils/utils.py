@@ -47,66 +47,73 @@ def get_name(user_id: str, client: WebClient) -> str:
     return str(user_data.get("real_name", ""))
 
 
+IDENTITY_BLOCK_ID = "report_forwarding_block"
+IDENTITY_ACTION_ID = "report_forwarding"
+IDENTITY_OPTION = {
+    "text": {"type": "plain_text", "text": "Include my username"},
+    "description": {
+        "type": "plain_text",
+        "text": "FD will see who filed this report. Leave unchecked to stay anonymous.",
+    },
+    "value": "with_username",
+}
+
+
 def begin_forward(message: "MessageEvent", client: WebClient) -> None:
-    options = [
+    default_selection = "with_username" if settings.disable_anonymous else "anonymous"
+
+    blocks: list[dict[str, Any]] = [
         {
-            "text": {"type": "plain_text", "text": "Forward with Username"},
-            "value": "with_username",
-        },
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    "Ready to send this report to FD with your username."
+                    if settings.disable_anonymous
+                    else "Ready to send this report to FD. It'll be sent anonymously unless you check the box below."
+                ),
+            },
+        }
     ]
     if not settings.disable_anonymous:
-        options.insert(0, {
-            "text": {"type": "plain_text", "text": "Forward Anonymously"},
-            "value": "anonymous",
-        })
-
-    # Default to anonymous forwarding unless it's disabled, so submitting
-    # without touching the dropdown still does the right thing.
-    default_option = options[0]
-
-    prompt_text = (
-        "Do you want to forward this report with your username?"
-        if settings.disable_anonymous
-        else "Do you want to forward this report anonymously or with your username?"
+        blocks.append(
+            {
+                "type": "actions",
+                "block_id": IDENTITY_BLOCK_ID,
+                "elements": [
+                    {
+                        "type": "checkboxes",
+                        "action_id": IDENTITY_ACTION_ID,
+                        "options": [IDENTITY_OPTION],
+                    }
+                ],
+            }
+        )
+    blocks.append(
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "Submit"},
+                    "style": "primary",
+                    "action_id": "submit_forwarding",
+                },
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "Cancel"},
+                    "style": "danger",
+                    "action_id": "cancel_forwarding",
+                },
+            ],
+        }
     )
 
     selection_prompt = client.chat_postMessage(
         channel=message.channel,
-        text="Select how this message should be forwarded",
-        thread_ts=message.ts,  # Thread the prompt under the user's message
-        blocks=[
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": prompt_text,
-                },
-                "accessory": {
-                    "type": "static_select",
-                    "action_id": "report_forwarding",
-                    "placeholder": {"type": "plain_text", "text": "Choose an option"},
-                    "options": options,
-                    "initial_option": default_option,
-                },
-            },
-            {
-                "type": "actions",
-                "elements": [
-                    {
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "Submit"},
-                        "style": "primary",
-                        "action_id": "submit_forwarding",
-                    },
-                    {
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "Cancel"},
-                        "style": "danger",
-                        "action_id": "cancel_forwarding",
-                    }
-                ],
-            },
-        ],
+        text="Submit this report to FD",
+        thread_ts=message.ts,
+        blocks=blocks,
     )
     prompt_data = cast(dict[str, Any], selection_prompt.data)
     selection_ts = str(prompt_data.get("ts", ""))
@@ -116,7 +123,7 @@ def begin_forward(message: "MessageEvent", client: WebClient) -> None:
         content=message.content or "",
         selection_ts=selection_ts,
         dm_channel=message.channel,
-        selection=default_option["value"],
+        selection=default_selection,
     )
 
 # def is_thread(event: Dict[str, Any]) -> bool:

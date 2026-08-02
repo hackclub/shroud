@@ -297,7 +297,7 @@ def _dispatch_message(event, say: Say, client: WebClient, respond: Respond):
                     client.chat_postMessage(
                         channel=dm_channel,
                         thread_ts=message.record["fields"]["dm_ts"],
-                        text="Thanks for reporting! Your report has been marked as resolved, please reach out to us again if you've any inqueries.",
+                        text="Thanks for reporting! Your report has been marked as resolved, please reach out to us again if you have any further inquiries.",
                     )
                     forwarded_ts = message.record["fields"].get("forwarded_ts")
                     if forwarded_ts:

@@ -186,6 +186,10 @@ def _dispatch_message(event, say: Say, client: WebClient, respond: Respond):
                             text=prefix_info.content_without_prefix,
                             username=utils.get_name(message.user, client),
                             icon_url=utils.get_profile_picture_url(message.user, client),
+                            metadata={
+                                "event_type": "shroud_message",
+                                "event_payload": {"source_user_id": message.user},
+                            },
                         )
                     try:
                         client.reactions_add(channel=message.channel, name="white_check_mark", timestamp=message.ts)
@@ -324,6 +328,10 @@ def _dispatch_message(event, say: Say, client: WebClient, respond: Respond):
                         text=prefix_info.content_without_prefix,
                         username=utils.get_name(message.user, client),
                         icon_url=utils.get_profile_picture_url(message.user, client),
+                        metadata={
+                            "event_type": "shroud_message",
+                            "event_payload": {"source_user_id": message.user},
+                        },
                     )
                 # Add :white_check_mark: reaction to the channel message
                 try:

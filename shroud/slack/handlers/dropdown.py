@@ -93,6 +93,12 @@ def handle_submission(ack, body, client: WebClient):
         unfurl_media=True,
         username=utils.get_name(user_id, client) if with_username else None,
         icon_url=utils.get_profile_picture_url(user_id, client) if with_username else None,
+        metadata={
+            "event_type": "shroud_message",
+            "event_payload": {"source_user_id": user_id},
+        }
+        if with_username
+        else None,
     )
     post_data = cast(dict[str, Any], post_resp.data)
     forwarded_ts = str(post_data.get("ts", ""))

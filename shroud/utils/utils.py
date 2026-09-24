@@ -167,7 +167,7 @@ def sanitize_attachments(attachments: list[dict[str, Any]]) -> list[dict[str, An
 def forward_files(files: list[dict[str, Any]], channel: str, thread_ts: str, client: WebClient) -> None:
     for file_data in files:
         url = file_data.get("url_private_download") or file_data.get("url_private")
-        if not url:
+        if not url or not url.startswith('https://files.slack.com/'):
             continue
         og = file_data.get("name", "file")
         ext = os.path.splitext(og)[1]
